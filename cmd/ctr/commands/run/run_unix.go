@@ -310,6 +310,10 @@ func NewContainer(ctx gocontext.Context, client *containerd.Client, context *cli
 				return nil
 			})
 		}
+
+		if c := context.String("rdt-class"); c != "" {
+			opts = append(opts, oci.WithRdt(c, "", ""))
+		}
 	}
 
 	runtimeOpts, err := getRuntimeOptions(context)
