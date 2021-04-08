@@ -87,6 +87,12 @@ documentation.
    **mutation_threshold** guarantees GC is scheduled after n number of database mutations (Default: **100**),
    **schedule_delay** defines the delay after trigger event before scheduling a GC (Default **"0ms"** [immediate]),
    **startup_delay** defines the delay after startup before scheduling a GC (Default **"100ms"**)
+ - **[plugins.rdt]** (Linux only) enables support for Intel RDT, a technology
+   for cache and memory bandwidth management. The plugin has one option
+   __config_file__ which specifies path to a configuration used for configuring
+   RDT (Default: **""**).
+   See https://github.com/intel/goresctrl/blob/v0.2.0/doc/rdt.md#configuration
+   for details of the configuration file format.
 
 ## EXAMPLE
 
