@@ -77,6 +77,10 @@ func initRdt(ic *plugin.InitContext) (interface{}, error) {
 
 }
 
+func Enabled() bool {
+	return enabled
+}
+
 // ContainerClassFromAnnotations examines container and pod annotations of a
 // container and returns its effective RDT class.
 func ContainerClassFromAnnotations(containerName string, containerAnnotations, podAnnotations map[string]string) (string, error) {

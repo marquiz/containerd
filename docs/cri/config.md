@@ -130,6 +130,10 @@ version = 2
     # default_runtime_name is the default runtime name to use.
     default_runtime_name = "runc"
 
+    # ignore_rdt_not_enabled_errors disables RDT related errors when RDT
+    # support has not been enabled.
+    ignore_rdt_not_enabled_errors = false
+
     # 'plugins."io.containerd.grpc.v1.cri".containerd.default_runtime' is the runtime to use in containerd.
     # DEPRECATED: use `default_runtime_name` and `plugins."io.containerd.grpc.v1.cri".containerd.runtimes` instead.
     [plugins."io.containerd.grpc.v1.cri".containerd.default_runtime]
