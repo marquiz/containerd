@@ -33,6 +33,7 @@ import (
 	selinux "github.com/opencontainers/selinux/go-selinux"
 	"github.com/opencontainers/selinux/go-selinux/label"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
 
 	"github.com/containerd/containerd/pkg/cri/annotations"
@@ -260,7 +261,12 @@ func (c *criService) containerSpec(
 	// Get RDT class
 	rdtClass, err := rdt.ContainerClassFromAnnotations(config.GetMetadata().GetName(), config.Annotations, sandboxConfig.Annotations)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to set RDT class")
+		if !rdt.Enabled() && c.config.ContainerdConfig.IgnoreRdtNotEnabledErrors {
+			rdtClass = ""
+			logrus.Debugf("continuing create container %s, ignoring rdt not enabled (%v)", containerName, err)
+		} else {
+			return nil, errors.Wrap(err, "failed to set RDT class")
+		}
 	}
 	if rdtClass != "" {
 		specOpts = append(specOpts, oci.WithRdt(rdtClass, "", ""))
