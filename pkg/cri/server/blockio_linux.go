@@ -24,6 +24,7 @@ import (
 	"github.com/containerd/containerd/services/tasks"
 	"github.com/intel/goresctrl/pkg/blockio"
 	runtimespec "github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/sirupsen/logrus"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
@@ -33,6 +34,7 @@ func (c *criService) getContainerBlockioClass(config *runtime.ContainerConfig, s
 
 	// Get class from container config
 	cls, ok := config.GetClassResources().GetClasses()[runtime.ClassResourceBlockio]
+	logrus.Infof("Block IO class %q (%v) from container config (%s)", cls, ok, containerName)
 
 	// Blockio class is not specified in CRI class resources. Check annotations as a fallback.
 	if !ok {
@@ -41,6 +43,7 @@ func (c *criService) getContainerBlockioClass(config *runtime.ContainerConfig, s
 		if err != nil {
 			return "", err
 		}
+		logrus.Infof("Block IO class %q from annotations (%s)", cls, containerName)
 	}
 
 	if cls != "" {

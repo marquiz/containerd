@@ -23,6 +23,7 @@ import (
 
 	"github.com/containerd/containerd/services/tasks"
 	"github.com/intel/goresctrl/pkg/rdt"
+	"github.com/sirupsen/logrus"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
@@ -32,6 +33,7 @@ func (c *criService) getContainerRdtClass(config *runtime.ContainerConfig, sandb
 
 	// Get class from container config
 	cls, ok := config.GetClassResources().GetClasses()[runtime.ClassResourceRdt]
+	logrus.Infof("RDT class %q (%v) from container config (%s)", cls, ok, containerName)
 
 	// Fallback: if RDT class is not specified in CRI class resources we check the pod annotations
 	if !ok {
@@ -40,6 +42,7 @@ func (c *criService) getContainerRdtClass(config *runtime.ContainerConfig, sandb
 		if err != nil {
 			return "", err
 		}
+		logrus.Infof("RDT class %q from annotations (%s)", cls, containerName)
 	}
 
 	if cls != "" {
