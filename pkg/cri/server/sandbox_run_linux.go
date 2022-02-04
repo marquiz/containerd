@@ -202,6 +202,13 @@ func (c *criService) sandboxContainerSpec(id string, config *runtime.PodSandboxC
 		customopts.WithAnnotation(annotations.SandboxLogDir, config.GetLogDirectory()),
 	)
 
+	// Handle QoS resources
+	if o, err := c.generateSandboxQoSResourceSpecOpts(config); err != nil {
+		return nil, err
+	} else {
+		specOpts = append(specOpts, o...)
+	}
+
 	return c.runtimeSpec(id, "", specOpts...)
 }
 
