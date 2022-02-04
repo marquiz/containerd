@@ -23,27 +23,34 @@ import (
 
 	"github.com/containerd/containerd/services/tasks"
 	"github.com/intel/goresctrl/pkg/rdt"
-	"github.com/sirupsen/logrus"
+	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
-// rdtClassFromAnnotations examines container and pod annotations of a
-// container and returns its effective RDT class.
-func (c *criService) rdtClassFromAnnotations(containerName string, containerAnnotations, podAnnotations map[string]string) (string, error) {
-	cls, err := rdt.ContainerClassFromAnnotations(containerName, containerAnnotations, podAnnotations)
+// getContainerRdtClass gets the effective RDT class of a container.
+func (c *criService) getContainerRdtClass(config *runtime.ContainerConfig, sandboxConfig *runtime.PodSandboxConfig) (string, error) {
+	containerName := config.GetMetadata().GetName()
 
-	if err == nil {
-		// Our internal check that RDT has been enabled
-		if cls != "" && !tasks.RdtEnabled() {
-			err = fmt.Errorf("RDT disabled, refusing to set RDT class of container %q to %q", containerName, cls)
+	// Get class from container config
+	cls, ok := config.GetClassResources().GetClasses()[runtime.ClassResourceRdt]
+
+	// Fallback: if RDT class is not specified in CRI class resources we check the pod annotations
+	if !ok {
+		var err error
+		cls, err = rdt.ContainerClassFromAnnotations(containerName, config.Annotations, sandboxConfig.Annotations)
+		if err != nil {
+			return "", err
 		}
 	}
 
-	if err != nil {
-		if !tasks.RdtEnabled() && c.config.ContainerdConfig.IgnoreRdtNotEnabledErrors {
-			logrus.Debugf("continuing create container %s, ignoring rdt not enabled (%v)", containerName, err)
-			return "", nil
+	if cls != "" {
+		// Check that our RDT support status
+		if !tasks.RdtEnabled() {
+			return "", fmt.Errorf("RDT disabled, refusing to set RDT class of container %q to %q", containerName, cls)
 		}
-		return "", err
+		// Check that the class exists
+		if _, ok := rdt.GetClass(cls); !ok {
+			return "", fmt.Errorf("invalid RDT class %q: not specified in configuration", cls)
+		}
 	}
 
 	return cls, nil

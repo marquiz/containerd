@@ -264,26 +264,11 @@ func (c *criService) containerSpec(
 
 	supplementalGroups := securityContext.GetSupplementalGroups()
 
-	// Get blockio class
-	blockIOClass, err := c.blockIOClassFromAnnotations(config.GetMetadata().GetName(), config.Annotations, sandboxConfig.Annotations)
-	if err != nil {
-		return nil, fmt.Errorf("failed to set blockio class: %w", err)
-	}
-	if blockIOClass != "" {
-		if linuxBlockIO, err := blockIOToLinuxOci(blockIOClass); err == nil {
-			specOpts = append(specOpts, oci.WithBlockIO(linuxBlockIO))
-		} else {
-			return nil, err
-		}
-	}
-
-	// Get RDT class
-	rdtClass, err := c.rdtClassFromAnnotations(config.GetMetadata().GetName(), config.Annotations, sandboxConfig.Annotations)
-	if err != nil {
-		return nil, fmt.Errorf("failed to set RDT class: %w", err)
-	}
-	if rdtClass != "" {
-		specOpts = append(specOpts, oci.WithRdt(rdtClass, "", ""))
+	// Handle class resources
+	if o, err := c.generateContainerClassResourceSpecOpts(config, sandboxConfig); err != nil {
+		return nil, err
+	} else {
+		specOpts = append(specOpts, o...)
 	}
 
 	for pKey, pValue := range getPassthroughAnnotations(sandboxConfig.Annotations,

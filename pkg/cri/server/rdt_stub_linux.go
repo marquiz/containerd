@@ -18,6 +18,6 @@
 
 package server
 
-func (c *criService) rdtClassFromAnnotations(containerName string, containerAnnotations, podAnnotations map[string]string) (string, error) {
+func (c *criService) getContainerRdtClass(config *runtime.ContainerConfig, sandboxConfig *runtime.PodSandboxConfig) (string, error) {
 	return "", nil
 }
