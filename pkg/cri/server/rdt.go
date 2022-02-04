@@ -22,28 +22,38 @@ import (
 	"fmt"
 
 	"github.com/containerd/containerd/v2/pkg/rdt"
-	"github.com/containerd/log"
+	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
-// rdtClassFromAnnotations examines container and pod annotations of a
-// container and returns its effective RDT class.
-func (c *criService) rdtClassFromAnnotations(containerName string, containerAnnotations, podAnnotations map[string]string) (string, error) {
-	cls, err := rdt.ContainerClassFromAnnotations(containerName, containerAnnotations, podAnnotations)
+// getContainerRdtClass gets the effective RDT class of a container.
+func (c *criService) getContainerRdtClass(config *runtime.ContainerConfig, sandboxConfig *runtime.PodSandboxConfig) (cls string, err error) {
+	containerName := config.GetMetadata().GetName()
 
-	if err == nil {
-		// Our internal check that RDT has been enabled
-		if cls != "" && !rdt.IsEnabled() {
+	// Get class from container config
+	var found bool
+	for _, r := range config.GetQOSResources() {
+		if r.GetName() == runtime.QoSResourceRdt {
+			found = true
+			cls = r.GetClass()
+		}
+	}
+
+	// Fallback: if RDT class is not specified in CRI QoS resources we check the pod annotations
+	if !found {
+		cls, err = rdt.ContainerClassFromAnnotations(containerName, config.Annotations, sandboxConfig.Annotations)
+		if err != nil {
+			return
+		}
+	}
+
+	if cls != "" {
+		// Check that our RDT support status
+		if !rdt.IsEnabled() {
 			err = fmt.Errorf("RDT disabled, refusing to set RDT class of container %q to %q", containerName, cls)
+		} else if !rdt.ClassExists(cls) {
+			err = fmt.Errorf("invalid RDT class %q: not specified in configuration", cls)
 		}
 	}
 
-	if err != nil {
-		if !rdt.IsEnabled() && c.config.ContainerdConfig.IgnoreRdtNotEnabledErrors {
-			log.L.Debugf("continuing create container %s, ignoring rdt not enabled (%v)", containerName, err)
-			return "", nil
-		}
-		return "", err
-	}
-
-	return cls, nil
+	return
 }

@@ -70,3 +70,13 @@ func ClassNameToLinuxOCI(className string) (*runtimespec.LinuxBlockIO, error) {
 func ContainerClassFromAnnotations(containerName string, containerAnnotations, podAnnotations map[string]string) (string, error) {
 	return blockio.ContainerClassFromAnnotations(containerName, containerAnnotations, podAnnotations)
 }
+
+// ClassExists returns true if the class is available.
+func ClassExists(cls string) bool {
+	for _, c := range blockio.GetClasses() {
+		if cls == c {
+			return true
+		}
+	}
+	return false
+}

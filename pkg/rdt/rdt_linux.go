@@ -83,3 +83,9 @@ func SetConfig(configFilePath string) error {
 func ContainerClassFromAnnotations(containerName string, containerAnnotations, podAnnotations map[string]string) (string, error) {
 	return rdt.ContainerClassFromAnnotations(containerName, containerAnnotations, podAnnotations)
 }
+
+// ClassExists returns true if the class is available.
+func ClassExists(cls string) bool {
+	_, ok := rdt.GetClass(cls)
+	return ok
+}

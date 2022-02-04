@@ -22,24 +22,37 @@ import (
 	"fmt"
 
 	"github.com/containerd/containerd/v2/pkg/blockio"
-	"github.com/containerd/log"
+	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
-// blockIOClassFromAnnotations examines container and pod annotations of a
-// container and returns its effective blockio class.
-func (c *criService) blockIOClassFromAnnotations(containerName string, containerAnnotations, podAnnotations map[string]string) (string, error) {
-	cls, err := blockio.ContainerClassFromAnnotations(containerName, containerAnnotations, podAnnotations)
-	if err != nil {
-		return "", err
-	}
+// getContainerBlockioClass gets the effective blockio class of a container.
+func (c *criService) getContainerBlockioClass(config *runtime.ContainerConfig, sandboxConfig *runtime.PodSandboxConfig) (cls string, err error) {
+	containerName := config.GetMetadata().GetName()
 
-	if cls != "" && !blockio.IsEnabled() {
-		if c.config.ContainerdConfig.IgnoreBlockIONotEnabledErrors {
-			cls = ""
-			log.L.Debugf("continuing create container %s, ignoring blockio not enabled (%v)", containerName, err)
-		} else {
-			return "", fmt.Errorf("blockio disabled, refusing to set blockio class of container %q to %q", containerName, cls)
+	// Get class from container config
+	var found bool
+	for _, r := range config.GetQOSResources() {
+		if r.GetName() == runtime.QoSResourceBlockio {
+			found = true
+			cls = r.GetClass()
 		}
 	}
-	return cls, nil
+
+	// Blockio class is not specified in CRI QoS resources. Check annotations as a fallback.
+	if !found {
+		cls, err = blockio.ContainerClassFromAnnotations(containerName, config.Annotations, sandboxConfig.Annotations)
+		if err != nil {
+			return
+		}
+	}
+
+	if cls != "" {
+		if !blockio.IsEnabled() {
+			err = fmt.Errorf("blockio disabled, refusing to set blockio class of container %q to %q", containerName, cls)
+		} else if !blockio.ClassExists(cls) {
+			err = fmt.Errorf("invalid blockio class %q: not specified in configuration", cls)
+		}
+	}
+
+	return
 }
