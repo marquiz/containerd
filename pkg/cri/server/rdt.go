@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/containerd/containerd/v2/pkg/rdt"
+	"github.com/containerd/log"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
@@ -37,6 +38,7 @@ func (c *criService) getContainerRdtClass(config *runtime.ContainerConfig, sandb
 			cls = r.GetClass()
 		}
 	}
+	log.L.Infof("RDT class %q (%v) from container config (%s)", cls, found, containerName)
 
 	// Fallback: if RDT class is not specified in CRI QoS resources we check the pod annotations
 	if !found {
@@ -52,6 +54,9 @@ func (c *criService) getContainerRdtClass(config *runtime.ContainerConfig, sandb
 			err = fmt.Errorf("RDT disabled, refusing to set RDT class of container %q to %q", containerName, cls)
 		} else if !rdt.ClassExists(cls) {
 			err = fmt.Errorf("invalid RDT class %q: not specified in configuration", cls)
+		}
+		if err != nil {
+			log.L.Infof("RDT class %q from annotations (%s)", cls, containerName)
 		}
 	}
 

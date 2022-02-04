@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/containerd/containerd/v2/pkg/blockio"
+	"github.com/containerd/log"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
@@ -37,6 +38,7 @@ func (c *criService) getContainerBlockioClass(config *runtime.ContainerConfig, s
 			cls = r.GetClass()
 		}
 	}
+	log.L.Infof("Block IO class %q (%v) from container config (%s)", cls, found, containerName)
 
 	// Blockio class is not specified in CRI QoS resources. Check annotations as a fallback.
 	if !found {
@@ -51,6 +53,9 @@ func (c *criService) getContainerBlockioClass(config *runtime.ContainerConfig, s
 			err = fmt.Errorf("blockio disabled, refusing to set blockio class of container %q to %q", containerName, cls)
 		} else if !blockio.ClassExists(cls) {
 			err = fmt.Errorf("invalid blockio class %q: not specified in configuration", cls)
+		}
+		if err != nil {
+			log.L.Infof("Block IO class %q from annotations (%s)", cls, containerName)
 		}
 	}
 
