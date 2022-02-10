@@ -120,7 +120,7 @@ service RuntimeService {
     rpc CheckpointContainer(CheckpointContainerRequest) returns (CheckpointContainerResponse) {}
 
     // GetContainerEvents gets container events from the CRI runtime
-    rpc  GetContainerEvents(GetEventsRequest) returns (stream ContainerEventResponse) {}
+    rpc GetContainerEvents(GetEventsRequest) returns (stream ContainerEventResponse) {}
 
     // ListMetricDescriptors gets the descriptors for the metrics that will be returned in ListPodSandboxMetrics.
     // This list should be static at startup: either the client and server restart together when
@@ -463,6 +463,8 @@ message PodSandboxConfig {
     LinuxPodSandboxConfig linux = 8;
     // Optional configurations specific to Windows hosts.
     WindowsPodSandboxConfig windows = 9;
+    // Configuration of QoS resources.
+    repeated PodQOSResource QOS_resources = 10;
 }
 
 message RunPodSandboxRequest {
@@ -556,6 +558,10 @@ message PodSandboxStatus {
     map<string, string> annotations = 8;
     // runtime configuration used for this PodSandbox.
     string runtime_handler = 9;
+    // Assignment of QoS resources. The runtime must report back assignment
+    // of all available QoS resources on the node, also possible defaults for
+    // resources that the client didn't explicitly request.
+    repeated PodQOSResource QOS_resources = 10;
 }
 
 message PodSandboxStatusResponse {
@@ -782,6 +788,10 @@ message ImageSpec {
     // The container image reference specified by the user (e.g. image[:tag] or digest).
     // Only set if available within the RPC context.
     string user_specified_image = 18;
+    // Runtime handler to use for pulling the image.
+    // If the runtime handler is unknown, the request should be rejected.
+    // An empty string would select the default runtime handler.
+    string runtime_handler = 19;
 }
 
 message KeyValue {
@@ -1008,6 +1018,23 @@ message WindowsContainerResources {
     int64 rootfs_size_in_bytes = 5;
 }
 
+// ContainerQOSResource specifies the assignment of one QoS resource for a
+// container.
+message ContainerQOSResource {
+    // Name of the QoS resource.
+    string name = 1;
+    // Name of the class.
+    string class = 2;
+}
+
+// PodQOSResource specifies the assignment of one QoS resource for a pod.
+message PodQOSResource {
+    // Name of the QoS resource.
+    string name = 1;
+    // Name of the class.
+    string class = 2;
+}
+
 // ContainerMetadata holds all necessary information for building the container
 // name. The container runtime is encouraged to expose the metadata in its user
 // interface for better user experience. E.g., runtime can construct a unique
@@ -1102,6 +1129,9 @@ message ContainerConfig {
 
     // CDI devices for the container.
     repeated CDIDevice CDI_devices = 17;
+
+    // Configuration of QoS resources.
+    repeated ContainerQOSResource QOS_resources = 18;
 }
 
 message CreateContainerRequest {
@@ -1275,6 +1305,10 @@ message ContainerResources {
     LinuxContainerResources linux = 1;
     // Resource limits configuration specific to Windows container.
     WindowsContainerResources windows = 2;
+    // Assignment of QoS resources. The runtime must report back assignment
+    // of all available QoS resources on the node, also possible defaults for
+    // resources that the client didn't explicitly request.
+    repeated ContainerQOSResource QOS_resources = 3;
 }
 
 message UpdateContainerResourcesRequest {
@@ -1288,6 +1322,8 @@ message UpdateContainerResourcesRequest {
     // container resources updating. This can be used for specifying experimental
     // resources to update or other options to use when updating the container.
     map<string, string> annotations = 4;
+    // Configuration of QoS resources.
+    repeated ContainerQOSResource QOS_resources = 5;
 }
 
 message UpdateContainerResourcesResponse {}
@@ -1517,6 +1553,39 @@ message RuntimeCondition {
 message RuntimeStatus {
     // List of current observed runtime conditions.
     repeated RuntimeCondition conditions = 1;
+    // Information about the discovered resources
+    ResourcesInfo resources = 2;
+}
+
+// ResourcesInfo contains information about the resources discovered by the
+// runtime.
+message ResourcesInfo {
+    // Pod-level QoS resources available.
+    repeated QOSResourceInfo pod_qos_resources = 1 [(gogoproto.customname) = "PodQOSResources"];
+    // Container-level QoS resources available.
+    repeated QOSResourceInfo container_qos_resources = 2 [(gogoproto.customname) = "ContainerQOSResources"];
+}
+
+// QOSResourceInfo contains information about one type of QoS resource.
+message QOSResourceInfo {
+    // Name of the QoS resources.
+    string Name = 1;
+    // Mutable is set to true if this resource supports in-place updates i.e.
+    // the class of a running container or sandbox can be changed.
+    bool Mutable = 2;
+    // List of classes of this QoS resource.
+    repeated QOSResourceClassInfo classes = 3;
+}
+
+// QOSResourceClassInfo contains information about one class of certain
+// QoS resource.
+message QOSResourceClassInfo {
+    // Name of the class
+    string name = 1;
+    // Capacity is the number of maximum allowed simultaneous assignments into this class
+    // Zero means "infinite" capacity i.e. the usage is not restricted.
+    uint64 capacity = 2;
+
 }
 
 message StatusRequest {
@@ -1579,6 +1648,11 @@ message WindowsFilesystemUsage {
 message ImageFsInfoResponse {
     // Information of image filesystem(s).
     repeated FilesystemUsage image_filesystems = 1;
+    // Information of container filesystem(s).
+    // This is an optional field, may be used for example if container and image
+    // storage are separated.
+    // Default will be to return this as empty.
+    repeated FilesystemUsage container_filesystems = 2;
 }
 
 message ContainerStatsRequest{

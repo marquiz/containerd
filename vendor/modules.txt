@@ -733,8 +733,8 @@ k8s.io/client-go/util/workqueue
 # k8s.io/component-base v0.28.4
 ## explicit; go 1.20
 k8s.io/component-base/logs/logreduction
-# k8s.io/cri-api v0.28.2
-## explicit; go 1.20
+# k8s.io/cri-api v0.28.2 => github.com/marquiz/kubernetes/staging/src/k8s.io/cri-api v0.0.0-20240104125421-94b9d9454519
+## explicit; go 1.21
 k8s.io/cri-api/pkg/apis/runtime/v1
 # k8s.io/klog/v2 v2.100.1
 ## explicit; go 1.13
@@ -768,3 +768,4 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.3.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
+# k8s.io/cri-api => github.com/marquiz/kubernetes/staging/src/k8s.io/cri-api v0.0.0-20240104125421-94b9d9454519
