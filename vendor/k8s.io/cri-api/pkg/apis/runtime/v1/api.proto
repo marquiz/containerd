@@ -450,6 +450,8 @@ message PodSandboxConfig {
     LinuxPodSandboxConfig linux = 8;
     // Optional configurations specific to Windows hosts.
     WindowsPodSandboxConfig windows = 9;
+    // Configuration of QoS resources.
+    PodQoSResources qos_resources = 10;
 }
 
 message RunPodSandboxRequest {
@@ -992,6 +994,19 @@ message WindowsContainerResources {
     int64 rootfs_size_in_bytes = 5;
 }
 
+// ContainerQoSResources specifies the configuration of QoS resources of a
+// container.
+message ContainerQoSResources {
+    // QoS resources the container will be assigned to.
+    map<string, string> classes = 1;
+}
+
+// PodQoSResources specifies the configuration of QoS resources of a pod.
+message PodQoSResources {
+    // QoS resources the pod will be assigned to.
+    map<string, string> classes = 1;
+}
+
 // ContainerMetadata holds all necessary information for building the container
 // name. The container runtime is encouraged to expose the metadata in its user
 // interface for better user experience. E.g., runtime can construct a unique
@@ -1079,6 +1094,9 @@ message ContainerConfig {
     LinuxContainerConfig linux = 15;
     // Configuration specific to Windows containers.
     WindowsContainerConfig windows = 16;
+
+    // Configuration of QoS resources.
+    ContainerQoSResources qos_resources = 17;
 }
 
 message CreateContainerRequest {
@@ -1251,6 +1269,8 @@ message ContainerResources {
     LinuxContainerResources linux = 1;
     // Resource limits configuration specific to Windows container.
     WindowsContainerResources windows = 2;
+    // Configuration of QoS resources.
+    ContainerQoSResources qos_resources = 3;
 }
 
 message UpdateContainerResourcesRequest {
@@ -1264,6 +1284,8 @@ message UpdateContainerResourcesRequest {
     // container resources updating. This can be used for specifying experimental
     // resources to update or other options to use when updating the container.
     map<string, string> annotations = 4;
+    // Configuration of QoS resources.
+    ContainerQoSResources qos_resources = 5;
 }
 
 message UpdateContainerResourcesResponse {}
@@ -1485,6 +1507,39 @@ message RuntimeCondition {
 message RuntimeStatus {
     // List of current observed runtime conditions.
     repeated RuntimeCondition conditions = 1;
+    // Information about the discovered resources
+    ResourcesInfo resources = 2;
+}
+
+// ResourcesInfo contains information about the resources discovered by the
+// runtime.
+message ResourcesInfo {
+    // Pod-level QoS resources available.
+    repeated QoSResourceInfo pod_qos_resources = 1;
+    // Container-level QoS resources available.
+    repeated QoSResourceInfo container_qos_resources = 2;
+}
+
+// QoSResourceInfo contains information about one type of QoS resource.
+message QoSResourceInfo {
+    // Name of the QoS resources.
+    string Name = 1;
+    // Mutable is set to true if this resource supports in-place updates i.e.
+    // the class of a running container or sandbox can be changed.
+    bool Mutable = 2;
+    // List of classes of this QoS resource.
+    repeated QoSResourceClassInfo classes = 3;
+}
+
+// QoSResourceClassInfo contains information about one class of certain
+// QoS resource.
+message QoSResourceClassInfo {
+    // Name of the class
+    string name = 1;
+    // Capacity is the number of maximum allowed simultaneous assignments into this class
+    // Zero means "infinite" capacity i.e. the usage is not restricted.
+    uint64 capacity = 2;
+
 }
 
 message StatusRequest {

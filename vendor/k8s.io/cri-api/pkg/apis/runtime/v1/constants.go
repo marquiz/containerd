@@ -53,3 +53,10 @@ const (
 	// LogTagDelimiter is the delimiter for different log tags.
 	LogTagDelimiter = ":"
 )
+
+const (
+	// QoSResourceRdt is the name of the RDT QoS resource
+	QoSResourceRdt = "rdt"
+	// QoSResourceBlockio is the name of the blockio QoS resource
+	QoSResourceBlockio = "blockio"
+)
