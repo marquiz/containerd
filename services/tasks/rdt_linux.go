@@ -56,3 +56,16 @@ func initRdt(configFilePath string) error {
 	return nil
 
 }
+
+// GetRdtClasses returns the names of available RDT classes.
+func GetRdtClasses() []string {
+	classes := []string{}
+
+	if RdtEnabled() {
+		for _, c := range rdt.GetClasses() {
+			classes = append(classes, c.Name())
+		}
+	}
+
+	return classes
+}
