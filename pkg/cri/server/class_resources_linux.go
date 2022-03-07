@@ -90,3 +90,44 @@ func (c *criService) generateContainerClassResourceSpecOpts(config *runtime.Cont
 
 	return specOpts, nil
 }
+
+// GetPodClassResourcesInfo returns information about all pod-level class resources.
+func GetPodClassResourcesInfo() []*runtime.ClassResourceInfo {
+	// NOTE: stub as currently no pod-level class resources are available
+	return []*runtime.ClassResourceInfo{}
+}
+
+// GetContainerClassResourcesInfo returns information about all container-level class resources.
+func GetContainerClassResourcesInfo() []*runtime.ClassResourceInfo {
+	info := []*runtime.ClassResourceInfo{}
+
+	// Handle RDT
+	if classes := tasks.GetRdtClasses(); len(classes) > 0 {
+		info = append(info,
+			&runtime.ClassResourceInfo{
+				Name:    runtime.ClassResourceRdt,
+				Mutable: false,
+				Classes: createClassInfos(classes...),
+			})
+	}
+
+	// Handle blockio
+	if classes := tasks.GetBlockioClasses(); len(classes) > 0 {
+		info = append(info,
+			&runtime.ClassResourceInfo{
+				Name:    runtime.ClassResourceBlockio,
+				Mutable: false,
+				Classes: createClassInfos(classes...),
+			})
+	}
+
+	return info
+}
+
+func createClassInfos(names ...string) []*runtime.ClassResourceClassInfo {
+	out := make([]*runtime.ClassResourceClassInfo, len(names))
+	for i, name := range names {
+		out[i] = &runtime.ClassResourceClassInfo{Name: name}
+	}
+	return out
+}

@@ -47,3 +47,12 @@ func initBlockIO(configFilePath string) error {
 	return nil
 
 }
+
+// GetBlockioClasses returns the names of available blockio classes.
+func GetBlockioClasses() []string {
+	if BlockIOEnabled() {
+		return blockio.GetClasses()
+	}
+
+	return []string{}
+}

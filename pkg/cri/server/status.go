@@ -52,11 +52,18 @@ func (c *criService) Status(ctx context.Context, r *runtime.StatusRequest) (*run
 	}
 
 	resp := &runtime.StatusResponse{
-		Status: &runtime.RuntimeStatus{Conditions: []*runtime.RuntimeCondition{
-			runtimeCondition,
-			networkCondition,
-		}},
+		Status: &runtime.RuntimeStatus{
+			Conditions: []*runtime.RuntimeCondition{
+				runtimeCondition,
+				networkCondition,
+			},
+			Resources: &runtime.ResourcesInfo{
+				PodClassResources:       GetPodClassResourcesInfo(),
+				ContainerClassResources: GetContainerClassResourcesInfo(),
+			},
+		},
 	}
+
 	if r.Verbose {
 		configByt, err := json.Marshal(c.config)
 		if err != nil {
