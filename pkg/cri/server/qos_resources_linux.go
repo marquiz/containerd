@@ -75,3 +75,44 @@ func (c *criService) generateContainerQoSResourceSpecOpts(config *runtime.Contai
 
 	return specOpts, nil
 }
+
+// GetPodQoSResourcesInfo returns information about all pod-level QoS resources.
+func GetPodQoSResourcesInfo() []*runtime.QOSResourceInfo {
+	// NOTE: stub as currently no pod-level QoS resources are available
+	return []*runtime.QOSResourceInfo{}
+}
+
+// GetContainerQoSResourcesInfo returns information about all container-level QoS resources.
+func GetContainerQoSResourcesInfo() []*runtime.QOSResourceInfo {
+	info := []*runtime.QOSResourceInfo{}
+
+	// Handle RDT
+	if classes := rdt.GetClasses(); len(classes) > 0 {
+		info = append(info,
+			&runtime.QOSResourceInfo{
+				Name:    runtime.QoSResourceRdt,
+				Mutable: false,
+				Classes: createClassInfos(classes...),
+			})
+	}
+
+	// Handle blockio
+	if classes := blockio.GetClasses(); len(classes) > 0 {
+		info = append(info,
+			&runtime.QOSResourceInfo{
+				Name:    runtime.QoSResourceBlockio,
+				Mutable: false,
+				Classes: createClassInfos(classes...),
+			})
+	}
+
+	return info
+}
+
+func createClassInfos(names ...string) []*runtime.QOSResourceClassInfo {
+	out := make([]*runtime.QOSResourceClassInfo, len(names))
+	for i, name := range names {
+		out[i] = &runtime.QOSResourceClassInfo{Name: name}
+	}
+	return out
+}

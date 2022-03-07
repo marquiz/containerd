@@ -80,3 +80,11 @@ func ClassExists(cls string) bool {
 	}
 	return false
 }
+
+// GetClasses returns the names of available blockio classes.
+func GetClasses() []string {
+	if IsEnabled() {
+		return blockio.GetClasses()
+	}
+	return []string{}
+}

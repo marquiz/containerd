@@ -89,3 +89,15 @@ func ClassExists(cls string) bool {
 	_, ok := rdt.GetClass(cls)
 	return ok
 }
+
+// GetClasses returns the names of available RDT classes.
+func GetClasses() []string {
+	classes := []string{}
+
+	if IsEnabled() {
+		for _, c := range rdt.GetClasses() {
+			classes = append(classes, c.Name())
+		}
+	}
+	return classes
+}
