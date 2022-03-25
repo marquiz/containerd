@@ -1,0 +1,7 @@
+Classes:
+  high-prio:
+    - Weight: 500
+  normal:
+    - Weight: 100
+  low-prio:
+    - Weight: 50

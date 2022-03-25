@@ -1,0 +1,11 @@
+partitions:
+  default:
+    l3Allocation: 100%
+    classes:
+      gold:
+        l3Allocation: 100%
+      silver:
+        l3Allocation: 66%
+      bronze:
+        l3Allocation: 33%
+
