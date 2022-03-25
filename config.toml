@@ -3,8 +3,8 @@ imports = []
 oom_score = 0
 plugin_dir = ""
 required_plugins = []
-root = "/var/lib/containerd"
-state = "/run/containerd"
+root = "/var/lib/containerd.marquiz"
+state = "/run/containerd.marquiz"
 temp = ""
 version = 2
 
@@ -19,7 +19,7 @@ version = 2
   uid = 0
 
 [grpc]
-  address = "/run/containerd/containerd.sock"
+  address = "/run/containerd.marquiz/containerd.sock"
   gid = 0
   max_recv_message_size = 16777216
   max_send_message_size = 16777216
@@ -73,7 +73,7 @@ version = 2
 
     [plugins."io.containerd.grpc.v1.cri".cni]
       bin_dir = "/opt/cni/bin"
-      conf_dir = "/etc/cni/net.d"
+      conf_dir = "/etc/cni/net.d.marquiz"
       conf_template = ""
       ip_pref = ""
       max_conf_num = 1
@@ -120,7 +120,7 @@ version = 2
           snapshotter = ""
 
           [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
-            BinaryName = ""
+            BinaryName = "/home/marquiz/go/git/runc/runc"
             CriuImagePath = ""
             CriuPath = ""
             CriuWorkPath = ""
@@ -130,7 +130,7 @@ version = 2
             NoPivotRoot = false
             Root = ""
             ShimCgroup = ""
-            SystemdCgroup = false
+            SystemdCgroup = true
 
       [plugins."io.containerd.grpc.v1.cri".containerd.untrusted_workload_runtime]
         base_runtime_spec = ""
@@ -197,8 +197,9 @@ version = 2
     default = ["walking"]
 
   [plugins."io.containerd.service.v1.tasks-service"]
-    blockio_config_file = ""
-    rdt_config_file = ""
+    blockio_config_file = "/home/marquiz/go/git/containerd/d-class-resources-discovery/blockio.conf.yaml"
+    rdt_config_file = "/home/marquiz/go/git/containerd/d-class-resources-discovery/rdt.conf.yaml"
+    #rdt_config_file = "/home/marquiz/go/git/containerd/d-class-resources-discovery/rdt.mba.conf.yaml"
 
   [plugins."io.containerd.snapshotter.v1.aufs"]
     root_path = ""

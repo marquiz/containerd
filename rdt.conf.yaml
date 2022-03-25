@@ -1,0 +1,13 @@
+partitions:
+  default:
+    l3Allocation: 100%
+    classes:
+      guaranteed:
+        l3Allocation: 100%
+      burstable:
+        l3Allocation: 66%
+      besteffort:
+        l3Allocation: 33%
+      worsteffort:
+        l3Allocation: 10%
+

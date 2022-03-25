@@ -1,0 +1,13 @@
+Classes:
+  high-prio:
+    - Weight: 500
+  normal:
+    - Devices:
+        - /dev/sd[a-z]
+      throttleWriteBps: 60M
+  low-prio:
+    - Weight: 50
+    - Devices:
+        - /dev/sd[a-z]
+      throttleReadBps: 50M
+      throttleWriteBps: 10M
