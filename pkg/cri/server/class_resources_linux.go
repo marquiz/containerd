@@ -25,6 +25,13 @@ import (
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
+// HACK: dummyclass resources
+var dummyContainerClassResourcesInfo []*runtime.ClassResourceInfo
+var dummyContainerClassResources map[string]map[string]struct{}
+
+var dummyPodClassResourcesInfo []*runtime.ClassResourceInfo
+var dummyPodClassResources map[string]map[string]struct{}
+
 // generateSandboxClassResourceSpecOpts generates SpecOpts for class resources.
 func (c *criService) generateSandboxClassResourceSpecOpts(config *runtime.PodSandboxConfig) ([]oci.SpecOpts, error) {
 	specOpts := []oci.SpecOpts{}
@@ -32,7 +39,14 @@ func (c *criService) generateSandboxClassResourceSpecOpts(config *runtime.PodSan
 	for r, c := range config.GetClassResources().GetClasses() {
 		switch r {
 		default:
-			return nil, fmt.Errorf("unknown pod-level class resource type %q", r)
+			cr, ok := dummyPodClassResources[r]
+			if !ok {
+				return nil, fmt.Errorf("unknown pod-level class resource type %q", r)
+			}
+			if _, ok := cr[c]; !ok {
+				return nil, fmt.Errorf("unknown %s class %q", r, c)
+			}
+			logrus.Infof("setting dummy class resource %s=%s", r, c)
 		}
 
 		if c == "" {
@@ -54,7 +68,14 @@ func (c *criService) generateContainerClassResourceSpecOpts(config *runtime.Cont
 			// We handle RDT and blockio separately as we have pod and
 			// container annotations as fallback interface
 		default:
-			return nil, fmt.Errorf("unknown class resource type %q", r)
+			cr, ok := dummyContainerClassResources[r]
+			if !ok {
+				return nil, fmt.Errorf("unknown class resource type %q", r)
+			}
+			if _, ok := cr[c]; !ok {
+				return nil, fmt.Errorf("unknown %s class %q", r, c)
+			}
+			logrus.Infof("setting dummy class resource %s=%s", r, c)
 		}
 
 		if c == "" {
@@ -94,7 +115,9 @@ func (c *criService) generateContainerClassResourceSpecOpts(config *runtime.Cont
 // GetPodClassResourcesInfo returns information about all pod-level class resources.
 func GetPodClassResourcesInfo() []*runtime.ClassResourceInfo {
 	// NOTE: stub as currently no pod-level class resources are available
-	return []*runtime.ClassResourceInfo{}
+	info := []*runtime.ClassResourceInfo{}
+	info = append(info, dummyPodClassResourcesInfo...)
+	return info
 }
 
 // GetContainerClassResourcesInfo returns information about all container-level class resources.
@@ -121,6 +144,8 @@ func GetContainerClassResourcesInfo() []*runtime.ClassResourceInfo {
 			})
 	}
 
+	info = append(info, dummyContainerClassResourcesInfo...)
+
 	return info
 }
 
@@ -130,4 +155,44 @@ func createClassInfos(names ...string) []*runtime.ClassResourceClassInfo {
 		out[i] = &runtime.ClassResourceClassInfo{Name: name}
 	}
 	return out
+}
+
+func init() {
+	// Initialize our dummy class resources hack
+	dummuGen := func(in []*runtime.ClassResourceInfo) map[string]map[string]struct{} {
+		out := make(map[string]map[string]struct{}, len(in))
+		for _, info := range in {
+			classes := make(map[string]struct{}, len(info.Classes))
+			for _, c := range info.Classes {
+				classes[c.Name] = struct{}{}
+			}
+			out[info.Name] = classes
+		}
+		return out
+	}
+
+	dummyPodClassResourcesInfo = []*runtime.ClassResourceInfo{
+		&runtime.ClassResourceInfo{
+			Name:    "podres-1",
+			Classes: createClassInfos("qos-a", "qos-b", "qos-c", "qos-d"),
+		},
+		&runtime.ClassResourceInfo{
+			Name:    "podres-2",
+			Classes: createClassInfos("cls-1", "cls-2", "cls-3", "cls-4", "cls-5"),
+		},
+	}
+
+	dummyContainerClassResourcesInfo = []*runtime.ClassResourceInfo{
+		&runtime.ClassResourceInfo{
+			Name:    "dummy-1",
+			Classes: createClassInfos("class-a", "class-b", "class-c", "class-d"),
+		},
+		&runtime.ClassResourceInfo{
+			Name:    "dummy-2",
+			Classes: createClassInfos("platinum", "gold", "silver", "bronze"),
+		},
+	}
+
+	dummyPodClassResources = dummuGen(dummyPodClassResourcesInfo)
+	dummyContainerClassResources = dummuGen(dummyContainerClassResourcesInfo)
 }
