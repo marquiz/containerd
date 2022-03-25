@@ -25,6 +25,13 @@ import (
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
+// HACK: dummyQoS resources
+var dummyContainerQoSResourcesInfo []*runtime.QoSResourceInfo
+var dummyContainerQoSResources map[string]map[string]struct{}
+
+var dummyPodQoSResourcesInfo []*runtime.QoSResourceInfo
+var dummyPodQoSResources map[string]map[string]struct{}
+
 // generateSandboxQoSResourceSpecOpts generates SpecOpts for QoS resources.
 func (c *criService) generateSandboxQoSResourceSpecOpts(config *runtime.PodSandboxConfig) ([]oci.SpecOpts, error) {
 	specOpts := []oci.SpecOpts{}
@@ -32,7 +39,14 @@ func (c *criService) generateSandboxQoSResourceSpecOpts(config *runtime.PodSandb
 	for r, c := range config.GetQosResources().GetClasses() {
 		switch r {
 		default:
-			return nil, fmt.Errorf("unknown pod-level QoS resource type %q", r)
+			cr, ok := dummyPodQoSResources[r]
+			if !ok {
+				return nil, fmt.Errorf("unknown pod-level QoS resource type %q", r)
+			}
+			if _, ok := cr[c]; !ok {
+				return nil, fmt.Errorf("unknown %s class %q", r, c)
+			}
+			logrus.Infof("setting dummy QoS resource %s=%s", r, c)
 		}
 
 		if c == "" {
@@ -54,7 +68,14 @@ func (c *criService) generateContainerQoSResourceSpecOpts(config *runtime.Contai
 			// We handle RDT and blockio separately as we have pod and
 			// container annotations as fallback interface
 		default:
-			return nil, fmt.Errorf("unknown QoS resource type %q", r)
+			cr, ok := dummyContainerQoSResources[r]
+			if !ok {
+				return nil, fmt.Errorf("unknown QoS resource type %q", r)
+			}
+			if _, ok := cr[c]; !ok {
+				return nil, fmt.Errorf("unknown %s class %q", r, c)
+			}
+			logrus.Infof("setting dummy QoS resource %s=%s", r, c)
 		}
 
 		if c == "" {
@@ -94,7 +115,9 @@ func (c *criService) generateContainerQoSResourceSpecOpts(config *runtime.Contai
 // GetPodQoSResourcesInfo returns information about all pod-level QoS resources.
 func GetPodQoSResourcesInfo() []*runtime.QoSResourceInfo {
 	// NOTE: stub as currently no pod-level QoS resources are available
-	return []*runtime.QoSResourceInfo{}
+	info := []*runtime.QoSResourceInfo{}
+	info = append(info, dummyPodQoSResourcesInfo...)
+	return info
 }
 
 // GetContainerQoSResourcesInfo returns information about all container-level QoS resources.
@@ -121,6 +144,8 @@ func GetContainerQoSResourcesInfo() []*runtime.QoSResourceInfo {
 			})
 	}
 
+	info = append(info, dummyContainerQoSResourcesInfo...)
+
 	return info
 }
 
@@ -130,4 +155,44 @@ func createClassInfos(names ...string) []*runtime.QoSResourceClassInfo {
 		out[i] = &runtime.QoSResourceClassInfo{Name: name}
 	}
 	return out
+}
+
+func init() {
+	// Initialize our dummy QoS resources hack
+	dummuGen := func(in []*runtime.QoSResourceInfo) map[string]map[string]struct{} {
+		out := make(map[string]map[string]struct{}, len(in))
+		for _, info := range in {
+			classes := make(map[string]struct{}, len(info.Classes))
+			for _, c := range info.Classes {
+				classes[c.Name] = struct{}{}
+			}
+			out[info.Name] = classes
+		}
+		return out
+	}
+
+	dummyPodQoSResourcesInfo = []*runtime.QoSResourceInfo{
+		&runtime.QoSResourceInfo{
+			Name:    "podres-1",
+			Classes: createClassInfos("qos-a", "qos-b", "qos-c", "qos-d"),
+		},
+		&runtime.QoSResourceInfo{
+			Name:    "podres-2",
+			Classes: createClassInfos("cls-1", "cls-2", "cls-3", "cls-4", "cls-5"),
+		},
+	}
+
+	dummyContainerQoSResourcesInfo = []*runtime.QoSResourceInfo{
+		&runtime.QoSResourceInfo{
+			Name:    "dummy-1",
+			Classes: createClassInfos("class-a", "class-b", "class-c", "class-d"),
+		},
+		&runtime.QoSResourceInfo{
+			Name:    "dummy-2",
+			Classes: createClassInfos("platinum", "gold", "silver", "bronze"),
+		},
+	}
+
+	dummyPodQoSResources = dummuGen(dummyPodQoSResourcesInfo)
+	dummyContainerQoSResources = dummuGen(dummyContainerQoSResourcesInfo)
 }
