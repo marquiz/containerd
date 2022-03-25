@@ -1,6 +1,6 @@
 version = 3
-root = '/var/lib/containerd'
-state = '/run/containerd'
+root = "/var/lib/containerd.marquiz"
+state = "/run/containerd.marquiz"
 temp = ''
 plugin_dir = ''
 disabled_plugins = []
@@ -9,7 +9,7 @@ oom_score = 0
 imports = []
 
 [grpc]
-  address = '/run/containerd/containerd.sock'
+  address = "/run/containerd.marquiz/containerd.sock"
   tcp_address = ''
   tcp_tls_ca = ''
   tcp_tls_cert = ''
@@ -95,7 +95,7 @@ imports = []
           sandboxer = 'podsandbox'
 
           [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runc.options]
-            BinaryName = ''
+            BinaryName = "/home/marquiz/go/git/runc/runc"
             CriuImagePath = ''
             CriuWorkPath = ''
             IoGid = 0
@@ -103,10 +103,11 @@ imports = []
             NoNewKeyring = false
             Root = ''
             ShimCgroup = ''
+            SystemdCgroup = true
 
     [plugins.'io.containerd.cri.v1.runtime'.cni]
       bin_dir = '/opt/cni/bin'
-      conf_dir = '/etc/cni/net.d'
+      conf_dir = "/etc/cni/net.d.marquiz"
       max_conf_num = 1
       setup_serially = false
       conf_template = ''
@@ -166,8 +167,9 @@ imports = []
     default = ['walking']
 
   [plugins.'io.containerd.service.v1.tasks-service']
-    blockio_config_file = ''
-    rdt_config_file = ''
+    blockio_config_file = "/home/marquiz/go/git/containerd/d-class-resources/blockio.conf.yaml"
+    rdt_config_file = "/home/marquiz/go/git/containerd/d-class-resources/rdt.conf.yaml"
+    #rdt_config_file = "/home/marquiz/go/git/containerd/d-class-resources-discovery/rdt.mba.conf.yaml"
 
   [plugins.'io.containerd.snapshotter.v1.blockfile']
     root_path = ''
