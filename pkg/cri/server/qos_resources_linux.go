@@ -152,7 +152,7 @@ func GetContainerQoSResourcesInfo() []*runtime.QoSResourceInfo {
 func createClassInfos(names ...string) []*runtime.QoSResourceClassInfo {
 	out := make([]*runtime.QoSResourceClassInfo, len(names))
 	for i, name := range names {
-		out[i] = &runtime.QoSResourceClassInfo{Name: name}
+		out[i] = &runtime.QoSResourceClassInfo{Name: name, Capacity: uint64(i)}
 	}
 	return out
 }
