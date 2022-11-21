@@ -152,7 +152,7 @@ func GetContainerClassResourcesInfo() []*runtime.ClassResourceInfo {
 func createClassInfos(names ...string) []*runtime.ClassResourceClassInfo {
 	out := make([]*runtime.ClassResourceClassInfo, len(names))
 	for i, name := range names {
-		out[i] = &runtime.ClassResourceClassInfo{Name: name}
+		out[i] = &runtime.ClassResourceClassInfo{Name: name, Capacity: uint64(i)}
 	}
 	return out
 }
