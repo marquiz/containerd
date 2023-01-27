@@ -548,6 +548,12 @@ func (c *criService) setupPodNetwork(ctx context.Context, sandbox *sandboxstore.
 	if err != nil {
 		return fmt.Errorf("get cni namespace options: %w", err)
 	}
+	// Handle QoS resources. We only care about these at the network setup phase (ignored at teardown).
+	if o, err := generateCniQoSResourceOpts(config); err != nil {
+		return fmt.Errorf("get cni namespace QoS options: %w", err)
+	} else {
+		opts = append(opts, o...)
+	}
 	log.G(ctx).WithField("podsandboxid", id).Debugf("begin cni setup")
 	netStart := time.Now()
 	if c.config.CniConfig.NetworkPluginSetupSerially {

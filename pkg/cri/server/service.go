@@ -177,7 +177,7 @@ func NewCRIService(config criconfig.Config, client *containerd.Client, nrip nri.
 			}
 		}
 		if path != "" {
-			m, err := newCNINetConfSyncer(path, i, c.cniLoadOptions())
+			m, err := newCNINetConfSyncer(name, path, i, c.cniLoadOptions())
 			if err != nil {
 				return nil, fmt.Errorf("failed to create cni conf monitor for %s: %w", name, err)
 			}

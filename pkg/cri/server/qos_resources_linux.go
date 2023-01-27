@@ -17,13 +17,28 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/containerd/containerd/oci"
 	"github.com/containerd/containerd/services/tasks"
+	cni "github.com/containerd/go-cni"
 	"github.com/sirupsen/logrus"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
+
+const (
+	// QoSResourceNet is the name of the CNI QoS resource
+	QoSResourceNet = "net"
+)
+
+type CniQoSClass struct {
+	// Capacity is the max number of simultaneous pods that can use this class
+	Capacity  uint64
+	BandWidth *cni.BandWidth
+}
+
+var cniQoSResource map[string]CniQoSClass
 
 // HACK: dummyQoS resources
 var dummyContainerQoSResourcesInfo []*runtime.QoSResourceInfo
@@ -38,6 +53,8 @@ func (c *criService) generateSandboxQoSResourceSpecOpts(config *runtime.PodSandb
 
 	for r, c := range config.GetQosResources().GetClasses() {
 		switch r {
+		case QoSResourceNet:
+			// Network QoS is handled in generateCniQoSResourceOpts()
 		default:
 			cr, ok := dummyPodQoSResources[r]
 			if !ok {
@@ -54,6 +71,21 @@ func (c *criService) generateSandboxQoSResourceSpecOpts(config *runtime.PodSandb
 		}
 	}
 	return specOpts, nil
+}
+
+func generateCniQoSResourceOpts(config *runtime.PodSandboxConfig) ([]cni.NamespaceOpts, error) {
+	nsOpts := []cni.NamespaceOpts{}
+
+	if netCls, ok := config.GetQosResources().GetClasses()[QoSResourceNet]; ok {
+		caps, ok := cniQoSResource[netCls]
+		if !ok {
+			return nil, fmt.Errorf("unknown %q class %q", QoSResourceNet, netCls)
+		}
+		if caps.BandWidth != nil {
+			nsOpts = append(nsOpts, cni.WithCapabilityBandWidth(*caps.BandWidth))
+		}
+	}
+	return nsOpts, nil
 }
 
 // generateContainerQoSResourceSpecOpts generates SpecOpts for QoS resources.
@@ -113,9 +145,22 @@ func (c *criService) generateContainerQoSResourceSpecOpts(config *runtime.Contai
 }
 
 // GetPodQoSResourcesInfo returns information about all pod-level QoS resources.
-func GetPodQoSResourcesInfo() []*runtime.QoSResourceInfo {
-	// NOTE: stub as currently no pod-level QoS resources are available
+func (c *criService) GetPodQoSResourcesInfo() []*runtime.QoSResourceInfo {
 	info := []*runtime.QoSResourceInfo{}
+
+	if len(cniQoSResource) > 0 {
+		classes := make([]*runtime.QoSResourceClassInfo, 0, len(cniQoSResource))
+		for n, c := range cniQoSResource {
+			classes = append(classes, &runtime.QoSResourceClassInfo{Name: n, Capacity: c.Capacity})
+		}
+
+		info = append(info, &runtime.QoSResourceInfo{
+			Name:    QoSResourceNet,
+			Mutable: false,
+			Classes: classes,
+		})
+	}
+
 	info = append(info, dummyPodQoSResourcesInfo...)
 	return info
 }
@@ -149,6 +194,46 @@ func GetContainerQoSResourcesInfo() []*runtime.QoSResourceInfo {
 	return info
 }
 
+func updateCniQoSResources(netplugin cni.CNI) error {
+	qos, err := getCniQoSResources(netplugin)
+	if err != nil {
+		return err
+	}
+	cniQoSResource = qos
+	return nil
+}
+
+func getCniQoSResources(netplugin cni.CNI) (map[string]CniQoSClass, error) {
+	if netplugin == nil {
+		return nil, fmt.Errorf("BUG: unable to parse CNI QoS resources, nil plugin was given")
+	}
+
+	cniConfig := netplugin.GetConfig()
+	if len(cniConfig.Networks) < 2 {
+		return nil, fmt.Errorf("unable to parse CNI config for QoS resources: no networks configured")
+	}
+	rawConf := cniConfig.Networks[1].Config.Source
+
+	/*if len(cniConfig.Networks[1].Config.Plugins) == 0 {
+		return nil, fmt.Errorf("unable to parse CNI config for QoS resources: no plugin configuration found in network")
+	}
+	rawConf := cniConfig.Networks[1].Config.Plugins[0].Source*/
+
+	tmp := struct {
+		Name string                 `json:"name,omitempty"`
+		Qos  map[string]CniQoSClass `json:"qos,omitempty"`
+	}{}
+	logrus.Infof("parsing CNI  QoS config: %s", rawConf)
+
+	if err := json.Unmarshal([]byte(rawConf), &tmp); err != nil {
+		logrus.Infof("failed to parse CNI config: %s", rawConf)
+		return nil, fmt.Errorf("failed to parse CNI config for QoS resources: %w", err)
+	}
+
+	logrus.Infof("parsed CNI  QoS config: %s", tmp)
+
+	return tmp.Qos, nil
+}
 func createClassInfos(names ...string) []*runtime.QoSResourceClassInfo {
 	out := make([]*runtime.QoSResourceClassInfo, len(names))
 	for i, name := range names {

@@ -58,7 +58,7 @@ func (c *criService) Status(ctx context.Context, r *runtime.StatusRequest) (*run
 				networkCondition,
 			},
 			Resources: &runtime.ResourcesInfo{
-				PodQosResources:       GetPodQoSResourcesInfo(),
+				PodQosResources:       c.GetPodQoSResourcesInfo(),
 				ContainerQosResources: GetContainerQoSResourcesInfo(),
 			},
 		},

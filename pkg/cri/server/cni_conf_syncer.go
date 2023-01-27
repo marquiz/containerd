@@ -33,6 +33,7 @@ type cniNetConfSyncer struct {
 	sync.RWMutex
 	lastSyncStatus error
 
+	name      string
 	watcher   *fsnotify.Watcher
 	confDir   string
 	netPlugin cni.CNI
@@ -40,7 +41,7 @@ type cniNetConfSyncer struct {
 }
 
 // newCNINetConfSyncer creates cni network conf syncer.
-func newCNINetConfSyncer(confDir string, netPlugin cni.CNI, loadOpts []cni.Opt) (*cniNetConfSyncer, error) {
+func newCNINetConfSyncer(name, confDir string, netPlugin cni.CNI, loadOpts []cni.Opt) (*cniNetConfSyncer, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create fsnotify watcher: %w", err)
@@ -55,6 +56,7 @@ func newCNINetConfSyncer(confDir string, netPlugin cni.CNI, loadOpts []cni.Opt) 
 	}
 
 	syncer := &cniNetConfSyncer{
+		name:      name,
 		watcher:   watcher,
 		confDir:   confDir,
 		netPlugin: netPlugin,
@@ -64,6 +66,11 @@ func newCNINetConfSyncer(confDir string, netPlugin cni.CNI, loadOpts []cni.Opt) 
 	if err := syncer.netPlugin.Load(syncer.loadOpts...); err != nil {
 		logrus.WithError(err).Error("failed to load cni during init, please check CRI plugin status before setting up network for pods")
 		syncer.updateLastStatus(err)
+	}
+	if syncer.name == defaultNetworkPlugin {
+		if err := updateCniQoSResources(syncer.netPlugin); err != nil {
+			logrus.WithError(err).Error("failed to get CNI QoS from the default plugin")
+		}
 	}
 	return syncer, nil
 }
@@ -95,6 +102,11 @@ func (syncer *cniNetConfSyncer) syncLoop() error {
 					Errorf("failed to reload cni configuration after receiving fs change event(%s)", event)
 			}
 			syncer.updateLastStatus(lerr)
+			if syncer.name == defaultNetworkPlugin {
+				if err := updateCniQoSResources(syncer.netPlugin); err != nil {
+					logrus.WithError(err).Error("failed to get CNI QoS from the default plugin")
+				}
+			}
 
 		case err := <-syncer.watcher.Errors:
 			if err != nil {
