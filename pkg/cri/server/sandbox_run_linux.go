@@ -29,6 +29,7 @@ import (
 	imagespec "github.com/opencontainers/image-spec/specs-go/v1"
 	runtimespec "github.com/opencontainers/runtime-spec/specs-go"
 	selinux "github.com/opencontainers/selinux/go-selinux"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 	runtime "k8s.io/cri-api/pkg/apis/runtime/v1"
 
@@ -66,6 +67,7 @@ func (c *criService) sandboxContainerSpec(id string, config *runtime.PodSandboxC
 		if config.GetLinux().GetCgroupParent() != "" {
 			cgroupsPath := getCgroupsPath(config.GetLinux().GetCgroupParent(), id)
 			specOpts = append(specOpts, oci.WithCgroup(cgroupsPath))
+			logrus.Infof("CGROUP PARENT %q", cgroupsPath)
 		}
 	}
 
